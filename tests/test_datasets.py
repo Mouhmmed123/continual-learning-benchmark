@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from cl_benchmark.datasets import get_benchmark
@@ -7,11 +8,16 @@ def test_split_mnist():
     """Verify split-MNIST creates five class-disjoint image streams."""
     stream = get_benchmark("split_mnist", num_tasks=5, batch_size=32)
     assert len(stream) == 5, f"Expected 5 tasks, got {len(stream)}"
+    all_seen_classes = []
     for task in stream:
         images, labels = next(iter(task.train_loader))
         assert images.shape == (32, 1, 28, 28)
         assert set(labels.numpy()).issubset(set(task.classes))
-    print("✓ Split-MNIST: Pass")
+        all_seen_classes.extend(task.classes)
+
+    # Verify complete class disjointness across tasks
+    assert len(all_seen_classes) == len(set(all_seen_classes)) == 10
+
 
 def test_split_cifar10():
     """Verify split-CIFAR10 returns channel-first RGB image batches."""
@@ -19,7 +25,7 @@ def test_split_cifar10():
     assert len(stream) == 5
     images, _ = next(iter(stream[0].train_loader))
     assert images.shape == (16, 3, 32, 32)
-    print("✓ Split-CIFAR10: Pass")
+
 
 def test_permuted_mnist():
     """Verify separate permuted-MNIST tasks produce different pixel layouts."""
@@ -28,10 +34,12 @@ def test_permuted_mnist():
     img0, _ = next(iter(stream[0].train_loader))
     img1, _ = next(iter(stream[1].train_loader))
     assert not torch.equal(img0, img1)
-    print("✓ Permuted-MNIST: Pass")
 
-if __name__ == "__main__":
-    test_split_mnist()
-    test_split_cifar10()
-    test_permuted_mnist()
-    print("\nAll dataset tests passed successfully!")
+
+def test_benchmark_error_handling():
+    """Verify benchmark errors on invalid names or indivisible task counts."""
+    with pytest.raises(ValueError, match="Unsupported benchmark protocol"):
+        get_benchmark("invalid_dataset_name")
+
+    with pytest.raises(ValueError, match="Cannot evenly divide"):
+        get_benchmark("split_mnist", num_tasks=3)
