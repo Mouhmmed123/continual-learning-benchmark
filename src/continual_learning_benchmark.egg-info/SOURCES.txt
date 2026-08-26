@@ -1,0 +1,16 @@
+LICENSE
+README.md
+pyproject.toml
+src/cl_benchmark/__init__.py
+src/cl_benchmark/datasets.py
+src/cl_benchmark/benchmarks/__init__.py
+src/cl_benchmark/metrics/__init__.py
+src/cl_benchmark/models/__init__.py
+src/cl_benchmark/strategies/__init__.py
+src/continual_learning_benchmark.egg-info/PKG-INFO
+src/continual_learning_benchmark.egg-info/SOURCES.txt
+src/continual_learning_benchmark.egg-info/dependency_links.txt
+src/continual_learning_benchmark.egg-info/requires.txt
+src/continual_learning_benchmark.egg-info/top_level.txt
+tests/test_datasets.py
+tests/test_setup.py

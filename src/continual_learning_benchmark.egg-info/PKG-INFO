@@ -1,0 +1,31 @@
+Metadata-Version: 2.4
+Name: continual-learning-benchmark
+Version: 0.1.0
+Summary: A PyTorch benchmark suite for continual and prototype-based learning algorithms.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch>=2.0.0
+Requires-Dist: torchvision>=0.15.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: matplotlib>=3.7.0
+Requires-Dist: pytest>=7.3.0
+Requires-Dist: ruff>=0.1.0
+Dynamic: license-file
+
+# Continual Learning Benchmark Suite
+
+A PyTorch framework for benchmarking continual learning algorithms under class-incremental and task-incremental setups, with a focus on mitigating catastrophic forgetting.
+
+## 📌 Features
+- **Data Streams:** Split-CIFAR100, Permuted MNIST.
+- **Methods:** Naive Fine-Tuning, EWC, Experience Replay, Nearest Class Mean (NCM).
+- **Metrics:** Average Accuracy ($A_K$), Backward Transfer ($BWT$), Forgetting Measure.
+
+## 🛠️ Installation & Setup
+```bash
+git clone [https://github.com/mouhmmed123/continual-learning-benchmark.git](https://github.com/mouhmmed123/continual-learning-benchmark.git)
+cd continual-learning-benchmark
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -e .
