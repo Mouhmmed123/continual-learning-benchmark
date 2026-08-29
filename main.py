@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
-import matplotlib.pyplot as plt
 import torch
 import torch.optim as optim
 
@@ -13,9 +12,11 @@ from cl_benchmark.datasets import TaskStream, get_benchmark
 from cl_benchmark.evaluator import Evaluator
 from cl_benchmark.models import MLP, ContinualModel, SimpleConvNet
 from cl_benchmark.strategies.base import BaseStrategy
+from cl_benchmark.strategies.ewc import EWC
 from cl_benchmark.strategies.naive import Naive
 from cl_benchmark.strategies.rehearsal import Rehearsal
 from cl_benchmark.utils import seed_everything
+from cl_benchmark.viz import plot_accuracy_trajectories
 
 
 def parse_args(args: Sequence[str] | None = None) -> argparse.Namespace:
@@ -43,7 +44,7 @@ def parse_args(args: Sequence[str] | None = None) -> argparse.Namespace:
         "--strategy",
         type=str,
         default="naive",
-        choices=["naive", "rehearsal"],
+        choices=["naive", "rehearsal", "ewc"],
         help="Continual learning training strategy algorithm.",
     )
     parser.add_argument(
@@ -88,6 +89,12 @@ def parse_args(args: Sequence[str] | None = None) -> argparse.Namespace:
         type=int,
         default=500,
         help="Replay memory buffer capacity for Rehearsal strategy.",
+    )
+    parser.add_argument(
+        "--ewc-lambda",
+        type=float,
+        default=400.0,
+        help="Regularization penalty hyperparameter for EWC strategy.",
     )
     parser.add_argument(
         "--seed",
@@ -140,16 +147,18 @@ def create_strategy(
     model: ContinualModel,
     optimizer: optim.Optimizer,
     memory_size: int,
+    ewc_lambda: float,
     batch_size: int,
     device: torch.device,
 ) -> BaseStrategy:
     """Instantiate the continual learning strategy.
 
     Args:
-        strategy_name: Name of the strategy ('naive' or 'rehearsal').
+        strategy_name: Name of the strategy ('naive', 'rehearsal', 'ewc').
         model: ContinualModel wrapper instance.
         optimizer: PyTorch optimizer instance.
         memory_size: Capacity of the exemplar buffer for rehearsal.
+        ewc_lambda: Regularization coefficient for EWC.
         batch_size: DataLoader mini-batch size.
         device: Compute device.
 
@@ -167,6 +176,13 @@ def create_strategy(
             optimizer=optimizer,
             buffer_size=memory_size,
             replay_batch_size=replay_batch_size,
+            device=device,
+        )
+    elif strategy_name == "ewc":
+        return EWC(
+            model=model,
+            optimizer=optimizer,
+            ewc_lambda=ewc_lambda,
             device=device,
         )
 
@@ -191,38 +207,13 @@ def plot_results(
         multi_head: Head configuration flag.
         save_path: Output file path for the plot.
     """
-    num_tasks = len(stream)
-    plt.figure(figsize=(9, 5.5))
-
-    for j in range(num_tasks):
-        train_steps = list(range(j, num_tasks))
-        accs = [evaluator.R[i, j] * 100 for i in train_steps]
-        label = f"Task {j} (Classes {stream[j].classes})"
-        plt.plot(train_steps, accs, marker="o", linewidth=1.8, label=label)
-
-    # Plot Average Accuracy progression
-    avg_accs = [evaluator.average_accuracy(task_id=i) * 100 for i in range(num_tasks)]
-    plt.plot(
-        range(num_tasks),
-        avg_accs,
-        "k--",
-        linewidth=2.2,
-        label="Average Accuracy ($A_k$)",
-    )
-
-    plt.xlabel("Trained Task ID", fontsize=11, fontweight="bold")
-    plt.ylabel("Test Accuracy (%)", fontsize=11, fontweight="bold")
     head_type = "Multi-Head" if multi_head else "Single-Head"
     title = f"{strategy_name.capitalize()} on {dataset_name.upper()} ({head_type})"
-    plt.title(title, fontsize=13, fontweight="bold", pad=12)
-    plt.xticks(range(num_tasks), [f"Task {i}" for i in range(num_tasks)], fontsize=10)
-    plt.ylim([0, 105])
-    plt.grid(True, linestyle="--", alpha=0.6)
-    plt.legend(loc="best", frameon=True, fontsize=9)
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
-    plt.close()
-    print(f"\n[✓] Performance plot successfully saved to: '{save_path}'")
+    plot_accuracy_trajectories(
+        task_accuracies=evaluator.R,
+        save_path=save_path,
+        title=title,
+    )
 
 
 def run_benchmark(args: argparse.Namespace) -> Evaluator:
@@ -254,6 +245,7 @@ def run_benchmark(args: argparse.Namespace) -> Evaluator:
         model=model,
         optimizer=optimizer,
         memory_size=args.memory_size,
+        ewc_lambda=args.ewc_lambda,
         batch_size=args.batch_size,
         device=device,
     )

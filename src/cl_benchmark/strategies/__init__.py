@@ -2,11 +2,13 @@
 
 from cl_benchmark.strategies.base import BaseStrategy
 from cl_benchmark.strategies.buffer import ExemplarBuffer
+from cl_benchmark.strategies.ewc import EWC
 from cl_benchmark.strategies.naive import Naive
 from cl_benchmark.strategies.rehearsal import ExperienceReplay, Rehearsal
 
 __all__ = [
     "BaseStrategy",
+    "EWC",
     "ExemplarBuffer",
     "Naive",
     "Rehearsal",
